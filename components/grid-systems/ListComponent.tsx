@@ -18,7 +18,7 @@ import {
   TableProps,
   Tabs,
   Tag,
-  Typography
+  Typography,
 } from 'antd';
 import _ from 'lodash';
 import { ReactNode } from 'react';
@@ -27,9 +27,9 @@ import { GridItem } from '@/types/gridItem';
 import { getComponentType } from '@/uitls/component';
 import { Bar, Column, Histogram, Line, Liquid, Pie, Radar, Rose, Stock } from '@ant-design/plots';
 
+import NavigationMenu from './configComponent/ConfigMenu';
 import { getStyleOfDevice } from './DataProvider';
 import RenderSliceItem from './RenderSliceItem';
-import NavigationMenu from './configComponent/ConfigMenu';
 
 export const componentRegistry = {
   button: Button,
@@ -46,6 +46,7 @@ export const componentRegistry = {
   radio: Radio,
   select: Select,
   form: Form,
+  formitem: Form.Item,
   collapse: Collapse,
   tag: Tag,
   tabs: Tabs,
@@ -62,7 +63,7 @@ export const componentRegistry = {
   radarchart: Radar,
   rosechart: Rose,
   stockchart: Stock,
-  menu: NavigationMenu
+  menu: NavigationMenu,
 };
 
 export const convertProps = ({
@@ -78,7 +79,7 @@ export const convertProps = ({
 }) => {
   const value = dataState || getData(data.data, valueStream) || valueStream || data.name;
   const valueType = data?.value?.toLowerCase();
-  const { isInput } = getComponentType(valueType || '');
+  const { isInput, isChart, isUseOptionsData } = getComponentType(valueType || '');
   switch (valueType) {
     case 'image':
       return {
@@ -111,6 +112,12 @@ export const convertProps = ({
     default:
       break;
   }
+  if (isUseOptionsData) {
+    return {
+      ...data.componentProps,
+      options: value,
+    };
+  }
   if (isInput) {
     return {
       ...data.componentProps,
@@ -118,8 +125,16 @@ export const convertProps = ({
       value: value,
     };
   }
+  if (isChart) {
+    return {
+      ...data.componentProps,
+      data: value,
+      style: { ...getStyleOfDevice(data), ...data?.componentProps?.style },
+    };
+  }
   return {
     ...data.componentProps,
+
     style: { ...getStyleOfDevice(data), ...data?.componentProps?.style },
     children: value,
   };
