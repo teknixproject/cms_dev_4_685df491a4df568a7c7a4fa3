@@ -2,23 +2,34 @@
 import {
   Button,
   Card,
+  Checkbox,
   Collapse,
   Drawer,
   Dropdown,
+  Form,
   Image,
   Input,
+  InputNumber,
+  List,
+  Radio,
+  Select,
   Statistic,
   Table,
+  TableProps,
   Tabs,
   Tag,
-  Typography,
+  Typography
 } from 'antd';
+import _ from 'lodash';
 import { ReactNode } from 'react';
 
 import { GridItem } from '@/types/gridItem';
+import { getComponentType } from '@/uitls/component';
 import { Bar, Column, Histogram, Line, Liquid, Pie, Radar, Rose, Stock } from '@ant-design/plots';
 
 import { getStyleOfDevice } from './DataProvider';
+import RenderSliceItem from './RenderSliceItem';
+import NavigationMenu from './configComponent/ConfigMenu';
 
 export const componentRegistry = {
   button: Button,
@@ -27,8 +38,14 @@ export const componentRegistry = {
   title: Typography.Title,
   paragraph: Typography.Paragraph,
   image: Image,
+  list: List,
   inputtext: Input,
+  inputnumber: InputNumber,
   table: Table,
+  checkbox: Checkbox,
+  radio: Radio,
+  select: Select,
+  form: Form,
   collapse: Collapse,
   tag: Tag,
   tabs: Tabs,
@@ -45,59 +62,69 @@ export const componentRegistry = {
   radarchart: Radar,
   rosechart: Rose,
   stockchart: Stock,
+  menu: NavigationMenu
 };
 
-// const renderData = (data: TData, findVariable, id) => {
-//   const stateValue = () => {
-//     const variable = findVariable({
-//       type: data.type,
-//       id: (data[data.type] as any).variableId,
-//     });
-//     return `[${variable?.key}]`;
-//   };
-//   if (!data) return id.split('$')[0];
-//   switch (data?.type) {
-//     case 'combineText':
-//       return data.combineText;
-//     case 'valueInput':
-//       return data.valueInput;
-//     case 'apiResponse':
-//       return stateValue();
-//     case 'appState':
-//       return stateValue();
-//     case 'componentState':
-//       return stateValue();
-//     case 'globalState':
-//       return stateValue();
-
-//     default:
-//       return data.defaultValue || `[${data.type}]` || id.split('$')[0];
-//   }
-// };
-export const convertProps = ({ data, findVariable }: { data: GridItem; findVariable: any }) => {
-  const value = 'test';
+export const convertProps = ({
+  data,
+  getData,
+  dataState,
+  valueStream,
+}: {
+  data: GridItem;
+  getData: any;
+  dataState?: any;
+  valueStream?: any;
+}) => {
+  const value = dataState || getData(data.data, valueStream) || valueStream || data.name;
   const valueType = data?.value?.toLowerCase();
-  if (valueType?.includes('chart'))
+  const { isInput } = getComponentType(valueType || '');
+  switch (valueType) {
+    case 'image':
+      return {
+        ...data.componentProps,
+        src: value,
+      };
+    case 'list':
+      return {
+        ...data.componentProps,
+        dataSource: _.isArray(value) ? value : data.componentProps.dataSource,
+        renderItem: (item: any) => {
+          return (
+            <List.Item>
+              <RenderSliceItem data={data.componentProps.box} valueStream={item} />
+            </List.Item>
+          );
+        },
+      };
+    case 'table':
+      return {
+        ...data.componentProps,
+        dataSource: _.isArray(value) ? value : data.componentProps.dataSource,
+        columns: data?.componentProps?.columns?.map((item: any) => {
+          return {
+            ...item,
+            render: (value: any) => <RenderSliceItem data={item.box} valueStream={value} />,
+          };
+        }),
+      } as TableProps;
+    default:
+      break;
+  }
+  if (isInput) {
     return {
-      // data: {
-      //   type: 'fetch',
-      //   value: 'https://gw.alipayobjects.com/os/bmw-prod/55424a73-7cb8-4f79-b60d-3ab627ac5698.json',
-      // },
-      // xField: (d: any) => new Date(d.year),
-      // yField: 'value',
-      // sizeField: 'value',
-      // shapeField: 'trail',
-      // legend: { size: false },
-      // colorField: 'category',
       ...data.componentProps,
+      style: { ...getStyleOfDevice(data), ...data?.componentProps?.style },
+      value: value,
     };
+  }
   return {
     ...data.componentProps,
     style: { ...getStyleOfDevice(data), ...data?.componentProps?.style },
-    children: value || getName(data?.id),
+    children: value,
   };
 };
-const getName = (id: string) => id.split('$')[0];
+export const getName = (id: string) => id.split('$')[0];
 const wrapWithAnchor = (children: ReactNode = 'Click me') => (
   <a
     onClick={(e) => {

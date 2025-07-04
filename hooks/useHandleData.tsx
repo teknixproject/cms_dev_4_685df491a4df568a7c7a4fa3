@@ -13,7 +13,7 @@ import { handleCustomFunction } from './handleCustomFunction';
 
 type UseHandleDataReturn = {
   dataState?: any;
-  getData: (data: TData | null | undefined) => any;
+  getData: (data: TData | null | undefined, valueStream?: any) => any;
 };
 
 const getRootConditionChild = (condition: TConditionChildMap): TConditionalChild | undefined => {
@@ -72,7 +72,7 @@ export const useHandleData = (props: TUseHandleData): UseHandleDataReturn => {
             return value?.message;
           default:
             return (
-              value ||
+              value?.value ||
               transformVariable({
                 ...variable!,
                 value: data.defaultValue,
@@ -252,16 +252,16 @@ export const useHandleData = (props: TUseHandleData): UseHandleDataReturn => {
   );
 
   //#region handle item list
-  const handleItemInList = (data: TData) => {
+  const handleItemInList = (data: TData, valueStream: any) => {
     const { jsonPath } = data.itemInList;
     if (jsonPath) {
       const result = JSONPath({
-        json: itemInList.current,
+        json: valueStream || itemInList.current,
         path: jsonPath || '',
       })?.[0];
       return result;
     }
-    return itemInList.current;
+    return valueStream || itemInList.current;
   };
 
   //#region handle custom function
@@ -347,8 +347,8 @@ export const useHandleData = (props: TUseHandleData): UseHandleDataReturn => {
 
   //#region getData
   const getData = useCallback(
-    (data: TData | null | undefined): any => {
-      if (_.isEmpty(data)) return;
+    (data: TData | null | undefined, valueStream?: any): any => {
+      if (_.isEmpty(data)) return '';
       if (!data || !data.type) return data?.defaultValue;
 
       switch (data.type) {
@@ -367,7 +367,7 @@ export const useHandleData = (props: TUseHandleData): UseHandleDataReturn => {
         case 'combineText':
           return data.combineText;
         case 'itemInList':
-          return handleItemInList(data);
+          return handleItemInList(data, valueStream);
         case 'customFunction':
           return handleCustomFunction({ data: data.customFunction, findCustomFunction, getData });
         default:
